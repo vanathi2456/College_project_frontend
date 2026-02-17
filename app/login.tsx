@@ -1,18 +1,22 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
+    Pressable,
     Image as RNImage,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Toast from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
@@ -65,20 +69,17 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!validate()) return;
-
         try {
             await login(email, password, role);
-            // Success handled by router/auth context usually, but just in case:
-            // showToast('Login Successful!', 'success');
         } catch (error) {
             showToast('Login Failed. Please check your credentials.');
         }
     };
 
-    const roles: { id: UserRole, label: string, icon: string, color: string }[] = [
-        { id: 'student', label: 'Student', icon: 'graduation-cap', color: '#1a237e' },
-        { id: 'faculty', label: 'Faculty', icon: 'user', color: '#2e7d32' },
-        { id: 'admin', label: 'Admin', icon: 'cogs', color: '#c62828' },
+    const roles: { id: UserRole, label: string, icon: string, color: string, bg: string[] }[] = [
+        { id: 'student', label: 'Student', icon: 'graduation-cap', color: '#0056D2', bg: ['#E3F2FD', '#BBDEFB'] },
+        { id: 'faculty', label: 'Faculty', icon: 'user', color: '#00A86B', bg: ['#E8F5E9', '#C8E6C9'] },
+        { id: 'admin', label: 'Admin', icon: 'cogs', color: '#D32F2F', bg: ['#FFEBEE', '#FFCDD2'] },
     ];
 
     return (
@@ -86,57 +87,66 @@ export default function LoginScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
+            <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                <View style={styles.header}>
+                <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.header}>
                     <View style={styles.logoContainer}>
-                        <RNImage source={require('../assets/images/college_logo.png')} style={styles.logoImage} resizeMode="contain" />
+                        <View style={styles.logoCircle}>
+                            <RNImage source={require('../assets/images/college_logo.png')} style={styles.logoImage} resizeMode="contain" />
+                        </View>
                     </View>
-                    <Text style={styles.collegeName}>Kathir College of Engineering</Text>
-                    <Text style={styles.subtitle}>Welcome Back!</Text>
-                </View>
+                    <Text style={styles.collegeName}>KATHIR COLLEGE</Text>
+                    <Text style={styles.subtitle}>Sign in to your account</Text>
+                </Animated.View>
 
-                <View style={styles.roleConfigContainer}>
+                {/* Role Selection */}
+                <Animated.View entering={FadeInDown.delay(200).duration(800)} style={styles.roleConfigContainer}>
                     <Text style={styles.roleLabel}>I am a...</Text>
                     <View style={styles.roleRow}>
                         {roles.map((r) => (
-                            <TouchableOpacity
+                            <Pressable
                                 key={r.id}
-                                style={[
-                                    styles.roleCard,
-                                    role === r.id && styles.roleCardActive,
-                                    { borderColor: role === r.id ? r.color : 'transparent' }
-                                ]}
+                                style={styles.roleCardWrapper}
                                 onPress={() => setRole(r.id)}
                             >
-                                <View style={[
-                                    styles.roleIconCircle,
-                                    { backgroundColor: role === r.id ? r.color : '#f0f0f0' }
-                                ]}>
-                                    <FontAwesome
-                                        name={r.icon as any}
-                                        size={20}
-                                        color={role === r.id ? '#fff' : '#666'}
-                                    />
-                                </View>
-                                <Text style={[
-                                    styles.roleText,
-                                    role === r.id && { color: r.color, fontWeight: 'bold' }
-                                ]}>
-                                    {r.label}
-                                </Text>
-                            </TouchableOpacity>
+                                <LinearGradient
+                                    colors={role === r.id ? r.bg : ['#fff', '#fff']}
+                                    style={[
+                                        styles.roleCard,
+                                        role === r.id && { borderColor: r.color, borderWidth: 1.5, transform: [{ scale: 1.05 }] }
+                                    ]}
+                                >
+                                    <View style={[
+                                        styles.roleIconCircle,
+                                        { backgroundColor: role === r.id ? r.color : '#f5f5f5' }
+                                    ]}>
+                                        <FontAwesome
+                                            name={r.icon as any}
+                                            size={18}
+                                            color={role === r.id ? '#fff' : '#888'}
+                                        />
+                                    </View>
+                                    <Text style={[
+                                        styles.roleText,
+                                        role === r.id && { color: r.color, fontWeight: 'bold' }
+                                    ]}>
+                                        {r.label}
+                                    </Text>
+                                </LinearGradient>
+                            </Pressable>
                         ))}
                     </View>
-                </View>
+                </Animated.View>
 
-                <View style={styles.formContainer}>
+                <Animated.View entering={FadeInUp.delay(400).duration(800)} style={styles.formContainer}>
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>
                             {role === 'student' ? 'Register Number / Email' : 'Email Address'}
                         </Text>
                         <View style={styles.inputWrapper}>
-                            <FontAwesome name="user-o" size={20} color="#666" style={styles.inputIcon} />
+                            <FontAwesome name="user-o" size={20} color={roles.find(r => r.id === role)?.color || '#666'} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder={role === 'student' ? "71001..." : "faculty@kce.ac.in"}
@@ -151,7 +161,7 @@ export default function LoginScreen() {
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Password</Text>
                         <View style={styles.inputWrapper}>
-                            <FontAwesome name="lock" size={20} color="#666" style={styles.inputIcon} />
+                            <FontAwesome name="lock" size={20} color={roles.find(r => r.id === role)?.color || '#666'} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 placeholder="••••••"
@@ -164,26 +174,35 @@ export default function LoginScreen() {
                     </View>
 
                     <TouchableOpacity style={styles.forgotPass}>
-                        <Text style={styles.forgotPassText}>Forgot Password?</Text>
+                        <Text style={[styles.forgotPassText, { color: roles.find(r => r.id === role)?.color }]}>Forgot Password?</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.submitButton, isLoading && styles.buttonDisabled]}
                         onPress={handleLogin}
                         disabled={isLoading}
+                        activeOpacity={0.8}
                     >
-                        {isLoading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.submitButtonText}>Login Details</Text>
-                        )}
+                        <LinearGradient
+                            colors={role === 'student' ? ['#0056D2', '#1976D2'] : role === 'faculty' ? ['#00A86B', '#388E3C'] : ['#D32F2F', '#C62828']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={[styles.submitButton, isLoading && { opacity: 0.7 }]}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Text style={styles.submitButtonText}>Login Details</Text>
+                                    <MaterialIcons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                                </View>
+                            )}
+                        </LinearGradient>
                     </TouchableOpacity>
-                </View>
+                </Animated.View>
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Don't have an account?</Text>
                     <TouchableOpacity>
-                        <Text style={styles.signupText}>Contact Admin</Text>
+                        <Text style={[styles.signupText, { color: roles.find(r => r.id === role)?.color }]}>Contact Admin</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -202,7 +221,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#F5F7FA',
     },
     scrollContent: {
         flexGrow: 1,
@@ -212,29 +231,38 @@ const styles = StyleSheet.create({
     header: {
         alignItems: 'center',
         marginBottom: 30,
+        marginTop: 20,
     },
     logoContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#e8eaf6',
+        marginBottom: 15,
+        shadowColor: 'rgba(0,0,0,0.1)',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        elevation: 10,
+    },
+    logoCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 15,
     },
     logoImage: {
-        width: 60,
-        height: 60,
+        width: 70,
+        height: 70,
     },
     collegeName: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 22,
+        fontWeight: '900',
         color: '#1a237e',
         textAlign: 'center',
         marginBottom: 5,
+        letterSpacing: 0.5,
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#666',
     },
     roleConfigContainer: {
@@ -242,124 +270,121 @@ const styles = StyleSheet.create({
     },
     roleLabel: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#444',
-        marginBottom: 10,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 12,
         marginLeft: 5,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     roleRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
-    roleCard: {
+    roleCardWrapper: {
         width: '31%',
-        backgroundColor: '#fff',
-        paddingVertical: 15,
-        borderRadius: 12,
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: 'transparent',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
     },
-    roleCardActive: {
+    roleCard: {
         backgroundColor: '#fff',
-        transform: [{ scale: 1.05 }],
-        elevation: 5,
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: 'transparent',
     },
     roleIconCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f0f0f0',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     roleText: {
-        fontSize: 12,
+        fontSize: 13,
         color: '#666',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     formContainer: {
         backgroundColor: '#fff',
-        borderRadius: 20,
+        borderRadius: 24,
         padding: 25,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowRadius: 20,
+        elevation: 10,
     },
     inputGroup: {
         marginBottom: 20,
     },
     inputLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#555',
         marginBottom: 8,
+        textTransform: 'uppercase',
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f7fa',
-        borderRadius: 12,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: '#EFEFEF',
         paddingHorizontal: 15,
+        height: 52,
     },
     inputIcon: {
-        marginRight: 10,
+        marginRight: 12,
     },
     input: {
         flex: 1,
-        paddingVertical: 12,
         fontSize: 16,
         color: '#333',
+        height: '100%',
     },
     forgotPass: {
         alignSelf: 'flex-end',
-        marginBottom: 20,
+        marginBottom: 25,
     },
     forgotPassText: {
-        color: '#1a237e',
-        fontWeight: '500',
+        fontWeight: '600',
         fontSize: 13,
     },
     submitButton: {
-        backgroundColor: '#1a237e',
         paddingVertical: 16,
-        borderRadius: 12,
+        borderRadius: 14,
         alignItems: 'center',
-        shadowColor: '#1a237e',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 5,
     },
-    buttonDisabled: {
-        backgroundColor: '#9fa8da',
-    },
     submitButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 30,
+        marginTop: 35,
     },
     footerText: {
         color: '#666',
         marginRight: 5,
+        fontSize: 14,
     },
     signupText: {
-        color: '#1a237e',
         fontWeight: 'bold',
+        fontSize: 14,
     },
 });

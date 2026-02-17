@@ -1,68 +1,195 @@
 import { FontAwesome } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+    Alert,
+    FlatList,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 
-const ISSUE_TYPES = ['Late Attendance', 'Misconduct', 'Ragging', 'Illegal Activity', 'Dress Code'];
+const COMPLAINT_TYPES = [
+    { id: 'attendance', name: 'Attendance Violation', color: '#FF9800', bg: '#FFF3E0' },
+    { id: 'misconduct', name: 'Misconduct', color: '#F44336', bg: '#FFEBEE' },
+    { id: 'ragging', name: 'Ragging', color: '#B71C1C', bg: '#FFCDD2' }, // Severe
+    { id: 'illegal', name: 'Illegal Activity', color: '#6A0DAD', bg: '#F3E5F5' },
+    { id: 'dishonesty', name: 'Academic Dishonesty', color: '#009688', bg: '#E0F2F1' },
+    { id: 'behavior', name: 'Behavior Issue', color: '#E91E63', bg: '#FCE4EC' },
+    { id: 'dresscode', name: 'Dress Code', color: '#3F51B5', bg: '#E8EAF6' },
+    { id: 'other', name: 'Others', color: '#607D8B', bg: '#ECEFF1' }
+];
+
+const MOCK_STUDENTS = [
+    { id: '722821104001', name: 'Aarav Kumar', dept: 'CSE' },
+    { id: '722821104002', name: 'Bhavna Reddy', dept: 'CSE' },
+    { id: '722821104003', name: 'Chirag Gupta', dept: 'ECE' },
+    { id: '722821104004', name: 'Diya Sharma', dept: 'EEE' },
+    { id: '722821104005', name: 'Eshwar P', dept: 'MECH' },
+    { id: '722821104006', name: 'Farah Khan', dept: 'CIVIL' },
+    { id: '722821104056', name: 'Hxtreme User', dept: 'CSE' },
+];
 
 export default function FacultyDiscipline() {
     const router = useRouter();
-    const [studentId, setStudentId] = useState('');
-    const [selectedIssue, setSelectedIssue] = useState('');
+
+    // State
+    const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+    const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
     const [description, setDescription] = useState('');
+    const [studentModalVisible, setStudentModalVisible] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
+
+    // Handlers
+    const toggleStudent = (id: string) => {
+        if (selectedStudents.includes(id)) {
+            setSelectedStudents(prev => prev.filter(s => s !== id));
+        } else {
+            setSelectedStudents(prev => [...prev, id]);
+        }
+    };
+
+    const toggleIssue = (id: string) => {
+        if (selectedIssues.includes(id)) {
+            setSelectedIssues(prev => prev.filter(i => i !== id));
+        } else {
+            setSelectedIssues(prev => [...prev, id]);
+        }
+    };
 
     const handleSubmit = () => {
-        if (!studentId || !selectedIssue || !description) {
-            Alert.alert('Error', 'Please fill all fields');
+        if (selectedStudents.length === 0 || selectedIssues.length === 0 || !description) {
+            Alert.alert('Incomplete Report', 'Please select at least one student, one issue, and provide a description.');
             return;
         }
-        Alert.alert('Report Submitted', `Discipline case filed against ${studentId} for ${selectedIssue}. Admin notified.`);
-        setStudentId('');
-        setDescription('');
-        setSelectedIssue('');
+
+        // Mock Submission
+        setSuccessMsg(`Successfully reported ${selectedStudents.length} student(s).`);
+
+        // Reset form after delay
+        setTimeout(() => {
+            setSuccessMsg('');
+            setSelectedStudents([]);
+            setSelectedIssues([]);
+            setDescription('');
+        }, 3000);
     };
+
+    const clearAll = () => {
+        setSelectedStudents([]);
+        setSelectedIssues([]);
+        setDescription('');
+        setSuccessMsg('');
+    };
+
+    const getStudentName = (id: string) => MOCK_STUDENTS.find(s => s.id === id)?.name || id;
 
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Report Misconduct</Text>
-                <Text style={styles.subtitle}>File a disciplinary report against a student</Text>
-            </View>
+            {/* Header */}
+            <LinearGradient
+                colors={['#C62828', '#B71C1C']}
+                style={styles.header}
+            >
+                <Text style={styles.title}>Disciplinary Action</Text>
+                <Text style={styles.subtitle}>Log complaints and misconduct reports</Text>
+            </LinearGradient>
 
-            <View style={styles.formCard}>
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Student Register Number</Text>
-                    <View style={styles.inputWrapper}>
-                        <FontAwesome name="search" size={16} color="#999" style={{ marginRight: 10 }} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ex: 722821104..."
-                            value={studentId}
-                            onChangeText={setStudentId}
-                        />
+            {successMsg ? (
+                <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.successBanner}>
+                    <FontAwesome name="check-circle" size={24} color="#fff" />
+                    <Text style={styles.successText}>{successMsg}</Text>
+                </Animated.View>
+            ) : null}
+
+            {/* Form Section */}
+            <View style={styles.card}>
+
+                {/* 1. Student Selection */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeaderLine}>
+                        <Text style={styles.label}>Select Students ({selectedStudents.length})</Text>
+                        <TouchableOpacity onPress={clearAll}>
+                            <Text style={styles.clearText}>Clear All</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                        style={styles.selectorBtn}
+                        onPress={() => setStudentModalVisible(true)}
+                    >
+                        <Text style={styles.selectorBtnText}>
+                            {selectedStudents.length > 0
+                                ? `${selectedStudents.length} Student(s) Selected`
+                                : 'Tap to select students...'}
+                        </Text>
+                        <FontAwesome name="chevron-down" size={14} color="#666" />
+                    </TouchableOpacity>
+
+                    {/* Selected Tags */}
+                    {selectedStudents.length > 0 && (
+                        <View style={styles.tagsContainer}>
+                            {selectedStudents.map(id => (
+                                <Animated.View key={id} entering={ZoomIn} exiting={ZoomOut} style={styles.studentTag}>
+                                    <Text style={styles.studentTagText}>{getStudentName(id)}</Text>
+                                    <TouchableOpacity onPress={() => toggleStudent(id)}>
+                                        <FontAwesome name="times" size={12} color="#fff" style={{ marginLeft: 6 }} />
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ))}
+                        </View>
+                    )}
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* 2. Issue Categories */}
+                <View style={styles.section}>
+                    <Text style={styles.label}>Complaint Categories ({selectedIssues.length})</Text>
+                    <View style={styles.gridContainer}>
+                        {COMPLAINT_TYPES.map((issue) => {
+                            const isSelected = selectedIssues.includes(issue.id);
+                            return (
+                                <TouchableOpacity
+                                    key={issue.id}
+                                    style={[
+                                        styles.checkboxItem,
+                                        isSelected && { borderColor: issue.color, backgroundColor: issue.bg }
+                                    ]}
+                                    onPress={() => toggleIssue(issue.id)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[
+                                        styles.checkboxBox,
+                                        isSelected ? { backgroundColor: issue.color, borderColor: issue.color } : { borderColor: '#ddd' }
+                                    ]}>
+                                        {isSelected && <FontAwesome name="check" size={10} color="#fff" />}
+                                    </View>
+                                    <Text style={[
+                                        styles.checkboxLabel,
+                                        isSelected && { color: issue.color, fontWeight: 'bold' }
+                                    ]}>{issue.name}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 </View>
 
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Select Issue Type</Text>
-                    <View style={styles.chipContainer}>
-                        {ISSUE_TYPES.map((type) => (
-                            <TouchableOpacity
-                                key={type}
-                                style={[styles.chip, selectedIssue === type && styles.chipActive]}
-                                onPress={() => setSelectedIssue(type)}
-                            >
-                                <Text style={[styles.chipText, selectedIssue === type && styles.chipTextActive]}>{type}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
+                <View style={styles.divider} />
 
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Incident Description</Text>
+                {/* 3. Description */}
+                <View style={styles.section}>
+                    <Text style={styles.label}>Incident Details</Text>
                     <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Detailed explanation of the incident..."
+                        style={styles.textArea}
+                        placeholder="Describe the incident, location, and any witnesses..."
                         multiline
                         numberOfLines={4}
                         value={description}
@@ -70,23 +197,65 @@ export default function FacultyDiscipline() {
                     />
                 </View>
 
-                <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-                    <Text style={styles.submitBtnText}>Submit Report</Text>
+                {/* Submit Button */}
+                <TouchableOpacity onPress={handleSubmit}>
+                    <LinearGradient
+                        colors={['#D32F2F', '#FF5252']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={styles.submitBtn}
+                    >
+                        <Text style={styles.submitBtnText}>Submit Complaint</Text>
+                        <FontAwesome name="paper-plane" size={16} color="#fff" style={{ marginLeft: 8 }} />
+                    </LinearGradient>
                 </TouchableOpacity>
+
             </View>
 
-            <Text style={styles.sectionHeader}>Recent Reports</Text>
-            <View style={styles.historyCard}>
-                <View style={styles.historyItem}>
-                    <View style={styles.historyHeader}>
-                        <Text style={styles.historyId}>722821104056</Text>
-                        <Text style={styles.historyDate}>Today</Text>
+            {/* Student Selection Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={studentModalVisible}
+                onRequestClose={() => setStudentModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Students</Text>
+                            <TouchableOpacity onPress={() => setStudentModalVisible(false)} style={styles.doneBtn}>
+                                <Text style={styles.doneText}>Done</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <FlatList
+                            data={MOCK_STUDENTS}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={{ paddingBottom: 20 }}
+                            renderItem={({ item }) => {
+                                const isSelected = selectedStudents.includes(item.id);
+                                return (
+                                    <TouchableOpacity
+                                        style={[styles.studentRow, isSelected && styles.studentRowSelected]}
+                                        onPress={() => toggleStudent(item.id)}
+                                    >
+                                        <View>
+                                            <Text style={[styles.studentName, isSelected && styles.studentNameSelected]}>{item.name}</Text>
+                                            <Text style={styles.studentId}>{item.id} • {item.dept}</Text>
+                                        </View>
+                                        {isSelected ? (
+                                            <FontAwesome name="check-circle" size={24} color="#00A86B" />
+                                        ) : (
+                                            <FontAwesome name="circle-o" size={24} color="#ccc" />
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
                     </View>
-                    <Text style={styles.historyIssue}>Late Attendance</Text>
-                    <Text style={styles.historyStatus}>Pending Review</Text>
                 </View>
-            </View>
+            </Modal>
 
+            <View style={{ height: 40 }} />
         </ScrollView>
     );
 }
@@ -94,134 +263,244 @@ export default function FacultyDiscipline() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f7fa',
-        padding: 20,
+        backgroundColor: '#F5F7FA',
     },
     header: {
-        marginBottom: 25,
+        paddingTop: Platform.OS === 'android' ? 50 : 20,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        shadowColor: '#D32F2F',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        elevation: 10,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
-        color: '#c62828',
+        color: '#fff',
     },
     subtitle: {
         fontSize: 14,
-        color: '#666',
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 4,
     },
-    formCard: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 30,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 3,
-    },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        fontWeight: '600',
-        marginBottom: 8,
-        color: '#333',
-    },
-    inputWrapper: {
+    successBanner: {
+        backgroundColor: '#00A86B',
+        marginHorizontal: 20,
+        borderRadius: 12,
+        padding: 15,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f9f9f9',
-        borderWidth: 1,
-        borderColor: '#eee',
-        borderRadius: 10,
-        paddingHorizontal: 15,
+        marginBottom: 20,
+        shadowColor: '#00A86B',
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 5,
     },
-    input: {
-        flex: 1,
-        paddingVertical: 12,
-        fontSize: 15,
-        color: '#333',
-    },
-    textArea: {
-        backgroundColor: '#f9f9f9',
-        borderWidth: 1,
-        borderColor: '#eee',
-        borderRadius: 10,
-        padding: 15,
-        textAlignVertical: 'top',
-        height: 100,
-    },
-    chipContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    chip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f0f0f0',
-        marginRight: 10,
-        marginBottom: 10,
-    },
-    chipActive: {
-        backgroundColor: '#c62828',
-    },
-    chipText: {
-        fontSize: 12,
-        color: '#555',
-    },
-    chipTextActive: {
+    successText: {
         color: '#fff',
+        marginLeft: 10,
         fontWeight: 'bold',
     },
-    submitBtn: {
-        backgroundColor: '#c62828',
-        paddingVertical: 15,
-        borderRadius: 12,
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 24,
+        marginHorizontal: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 4,
+        marginBottom: 30,
+    },
+    section: {
+        marginBottom: 15,
+    },
+    sectionHeaderLine: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 10,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    clearText: {
+        color: '#D32F2F',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    selectorBtn: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#FAFAFA',
+        padding: 15,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#EEE',
+    },
+    selectorBtnText: {
+        color: '#444',
+        fontSize: 14,
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
         marginTop: 10,
+    },
+    studentTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1A237E',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        marginRight: 8,
+        marginBottom: 8,
+    },
+    studentTagText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginHorizontal: -5,
+    },
+    checkboxItem: {
+        width: '47%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#eee',
+        marginBottom: 10,
+        marginHorizontal: '1.5%',
+    },
+    checkboxBox: {
+        width: 18,
+        height: 18,
+        borderRadius: 4,
+        borderWidth: 2,
+        marginRight: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    checkboxLabel: {
+        fontSize: 12, // Compact
+        color: '#555',
+        flexShrink: 1,
+    },
+    textArea: {
+        backgroundColor: '#FAFAFA',
+        borderWidth: 1,
+        borderColor: '#EEE',
+        borderRadius: 12,
+        padding: 15,
+        textAlignVertical: 'top',
+        minHeight: 100,
+        fontSize: 14,
+        color: '#333',
+    },
+    submitBtn: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderRadius: 30,
+        marginTop: 10,
+        elevation: 5,
+        shadowColor: '#D32F2F',
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
     },
     submitBtnText: {
         color: '#fff',
-        fontWeight: 'bold',
         fontSize: 16,
-    },
-    sectionHeader: {
-        fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: 15,
-        color: '#333',
+        letterSpacing: 1,
     },
-    historyCard: {
+    divider: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+        marginVertical: 20,
+    },
+    // Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
         backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 15,
-        elevation: 2,
+        borderTopLeftRadius: 25,
+        borderTopRightRadius: 25,
+        height: '80%',
+        padding: 20,
     },
-    historyItem: {
-        marginBottom: 0,
-    },
-    historyHeader: {
+    modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 5,
+        alignItems: 'center',
+        marginBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        paddingBottom: 15,
     },
-    historyId: {
+    modalTitle: {
+        fontSize: 22,
         fontWeight: 'bold',
-        fontSize: 15,
+        color: '#333',
     },
-    historyDate: {
-        color: '#999',
+    doneBtn: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    doneText: {
+        fontSize: 14,
+        color: '#2E7D32',
+        fontWeight: 'bold',
+    },
+    studentRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f5f5f5',
+    },
+    studentRowSelected: {
+        backgroundColor: '#F1F8E9',
+        marginHorizontal: -20,
+        paddingHorizontal: 20,
+    },
+    studentName: {
+        fontSize: 16,
+        color: '#333',
+        marginBottom: 2,
+    },
+    studentNameSelected: {
+        fontWeight: 'bold',
+        color: '#2E7D32',
+    },
+    studentId: {
         fontSize: 12,
-    },
-    historyIssue: {
-        color: '#c62828',
-        marginBottom: 5,
-    },
-    historyStatus: {
-        fontSize: 12,
-        color: '#f9a825',
-        fontWeight: '600',
+        color: '#888',
     },
 });

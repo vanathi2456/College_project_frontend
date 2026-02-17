@@ -1,5 +1,6 @@
 import { FontAwesome } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -7,8 +8,8 @@ import {
     Linking,
     Platform,
     ScrollView,
+    StatusBar,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -34,6 +35,13 @@ interface StudentProfileData {
     parentEmail: string;
     occupation: string;
     parentAddress: string;
+
+    // Mother Details
+    motherName: string;
+    motherMobile: string;
+    motherEmail: string;
+    motherOccupation: string;
+    motherAddress: string;
 }
 
 const INITIAL_DATA: StudentProfileData = {
@@ -46,40 +54,36 @@ const INITIAL_DATA: StudentProfileData = {
     mobileNumber: '9876543210',
     email: 'arun.k@example.com',
     residentialAddress: '123, Gandhi Street, Coimbatore - 641001',
+
+    // Father
     parentName: 'Ravi Kumar',
     relationship: 'Father',
     parentMobile: '9988776655',
     parentEmail: 'ravi.k@example.com',
     occupation: 'Engineer',
     parentAddress: '123, Gandhi Street, Coimbatore - 641001',
+
+    // Mother
+    motherName: 'Lakshmi Devi',
+    motherMobile: '9876500000',
+    motherEmail: 'lakshmi.d@example.com',
+    motherOccupation: 'Teacher',
+    motherAddress: '123, Gandhi Street, Coimbatore - 641001',
 };
 
 const DEPARTMENTS = ['Computer Science', 'Electronics & Comm', 'Mechanical', 'Civil', 'Electrical & Electronics', 'AI & Data Science'];
 
 export default function StudentProfile() {
+    const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<StudentProfileData>(INITIAL_DATA);
     const [sameAddress, setSameAddress] = useState(true);
 
     const handleSave = () => {
-        // Validation
         if (!formData.fullName || !formData.email || !formData.mobileNumber) {
             Alert.alert('Error', 'Please fill in all required fields');
             return;
         }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.email)) {
-            Alert.alert('Error', 'Invalid email format');
-            return;
-        }
-
-        if (formData.mobileNumber.length < 10) {
-            Alert.alert('Error', 'Invalid mobile number');
-            return;
-        }
-
-        // Mock Save
         Alert.alert('Success', 'Profile updated successfully!', [
             { text: 'OK', onPress: () => setIsEditing(false) }
         ]);
@@ -88,7 +92,11 @@ export default function StudentProfile() {
     const toggleSameAddress = (value: boolean) => {
         setSameAddress(value);
         if (value) {
-            setFormData(prev => ({ ...prev, parentAddress: prev.residentialAddress }));
+            setFormData(prev => ({
+                ...prev,
+                parentAddress: prev.residentialAddress,
+                motherAddress: prev.residentialAddress
+            }));
         }
     };
 
@@ -97,15 +105,47 @@ export default function StudentProfile() {
             const newData = { ...prev, [key]: value };
             if (sameAddress && key === 'residentialAddress') {
                 newData.parentAddress = value;
+                newData.motherAddress = value;
             }
             return newData;
         });
     };
 
-    const renderField = (label: string, field: keyof StudentProfileData, placeholder: string, keyboardType: 'default' | 'email-address' | 'phone-pad' = 'default', editable = true) => (
-        <View style={styles.inputGroup}>
-            <Text style={styles.label}>{label}</Text>
-            {isEditing && editable ? (
+    const renderHeader = () => (
+        <LinearGradient
+            colors={['#0056D2', '#6A0DAD']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={styles.headerContainer}
+        >
+            <View style={styles.headerContent}>
+                <View style={styles.avatarContainer}>
+                    <Text style={styles.avatarText}>{formData.fullName.charAt(0)}</Text>
+                </View>
+                <View>
+                    <Text style={styles.headerName}>{formData.fullName}</Text>
+                    <Text style={styles.headerSub}>{formData.registerNumber} • {formData.department}</Text>
+                </View>
+            </View>
+            <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() => isEditing ? handleSave() : setIsEditing(true)}
+            >
+                <FontAwesome name={isEditing ? "check" : "pencil"} size={16} color="#0056D2" />
+                <Text style={styles.editBtnText}>{isEditing ? 'Save Profile' : 'Edit Profile'}</Text>
+            </TouchableOpacity>
+        </LinearGradient>
+    );
+
+    const renderField = (label: string, field: keyof StudentProfileData, placeholder: string, icon: string, keyboardType: 'default' | 'email-address' | 'phone-pad' = 'default') => (
+        <View style={styles.fieldContainer}>
+            <View style={styles.labelRow}>
+                <View style={[styles.labelIcon, { backgroundColor: '#E3F2FD' }]}>
+                    <FontAwesome name={icon as any} size={14} color="#0056D2" />
+                </View>
+                <Text style={styles.label}>{label}</Text>
+            </View>
+
+            {isEditing ? (
                 <TextInput
                     style={styles.input}
                     value={formData[field]}
@@ -113,57 +153,28 @@ export default function StudentProfile() {
                     placeholder={placeholder}
                     keyboardType={keyboardType}
                     autoCapitalize="none"
+                    placeholderTextColor="#999"
                 />
             ) : (
                 <View style={styles.valueRow}>
                     <Text style={styles.valueText}>{formData[field]}</Text>
-                    {field === 'parentMobile' && (
+                    {(field === 'parentMobile' || field === 'motherMobile' || field === 'mobileNumber') && (
                         <View style={styles.actionIcons}>
                             <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: '#e8f5e9' }]}
+                                style={[styles.actionBtn, { backgroundColor: '#E8F5E9' }]}
                                 onPress={() => Linking.openURL(`tel:${formData[field]}`)}
                             >
-                                <FontAwesome name="phone" size={16} color="#2e7d32" />
+                                <FontAwesome name="phone" size={16} color="#00A86B" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: '#e3f2fd' }]}
+                                style={[styles.actionBtn, { backgroundColor: '#FFF3E0' }]}
                                 onPress={() => Linking.openURL(`sms:${formData[field]}`)}
                             >
-                                <FontAwesome name="comment" size={16} color="#1565c0" />
+                                <FontAwesome name="comment" size={16} color="#FF8C00" />
                             </TouchableOpacity>
                         </View>
                     )}
                 </View>
-            )}
-        </View>
-    );
-
-    const renderDropdown = (label: string, field: keyof StudentProfileData, options: string[]) => (
-        <View style={styles.inputGroup}>
-            <Text style={styles.label}>{label}</Text>
-            {isEditing ? (
-                <View style={styles.dropdownContainer}>
-                    {/* Simplified Dropdown for Mockup - In real app use a Picker or Modal */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {options.map((option) => (
-                            <TouchableOpacity
-                                key={option}
-                                style={[
-                                    styles.optionChip,
-                                    formData[field] === option && styles.optionChipSelected
-                                ]}
-                                onPress={() => updateField(field, option)}
-                            >
-                                <Text style={[
-                                    styles.optionText,
-                                    formData[field] === option && styles.optionTextSelected
-                                ]}>{option}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            ) : (
-                <Text style={styles.valueText}>{formData[field]}</Text>
             )}
         </View>
     );
@@ -173,81 +184,93 @@ export default function StudentProfile() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <Stack.Screen options={{
-                headerRight: () => (
-                    <TouchableOpacity onPress={() => isEditing ? handleSave() : setIsEditing(true)}>
-                        <Text style={styles.headerBtn}>{isEditing ? 'Save' : 'Edit'}</Text>
-                    </TouchableOpacity>
-                )
-            }} />
+            <Stack.Screen options={{ headerShown: false }} />
+            <StatusBar barStyle="light-content" backgroundColor="#0056D2" />
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <View style={styles.iconBox}>
-                            <FontAwesome name="user-circle" size={24} color="#1a237e" />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {renderHeader()}
+
+                <View style={styles.contentContainer}>
+
+                    {/* 🔹 Personal Details */}
+                    <View style={styles.sectionCard}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Personal Information</Text>
+                            <View style={styles.sectionLine} />
                         </View>
-                        <Text style={styles.sectionTitle}>Personal Details</Text>
+
+                        {renderField('Full Name', 'fullName', 'Enter Name', 'user')}
+                        {renderField('Date of Birth', 'dob', 'YYYY-MM-DD', 'calendar')}
+                        {renderField('Gender', 'gender', 'Select Gender', 'transgender')}
+                        {renderField('Mobile', 'mobileNumber', 'Enter Mobile', 'mobile', 'phone-pad')}
+                        {renderField('Email', 'email', 'Enter Email', 'envelope', 'email-address')}
+                        {renderField('Address', 'residentialAddress', 'Enter Address', 'map-marker')}
                     </View>
 
-                    <View style={styles.card}>
-                        {renderField('Register Number', 'registerNumber', 'Enter Register Number', 'default', false)}
-                        {renderField('Full Name', 'fullName', 'Enter Full Name')}
-                        {renderField('Date of Birth', 'dob', 'YYYY-MM-DD')}
-                        {renderDropdown('Gender', 'gender', ['Male', 'Female', 'Other'])}
-                        {renderDropdown('Department', 'department', DEPARTMENTS)}
-                        {renderField('Semester', 'semester', 'Enter Semester', 'phone-pad')}
-                        {renderField('Mobile Number', 'mobileNumber', 'Enter Mobile Number', 'phone-pad')}
-                        {renderField('Email Address', 'email', 'Enter Email', 'email-address')}
-                        {renderField('Residential Address', 'residentialAddress', 'Enter Address')}
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <View style={[styles.iconBox, { backgroundColor: '#e8f5e9' }]}>
-                            <FontAwesome name="users" size={24} color="#2e7d32" />
+                    {/* 🔹 Father Details */}
+                    <View style={styles.sectionCard}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Father / Guardian</Text>
+                            <View style={[styles.sectionLine, { backgroundColor: '#FF8C00' }]} />
                         </View>
-                        <Text style={styles.sectionTitle}>Parent / Guardian Details</Text>
-                    </View>
+                        {renderField('Father Name', 'parentName', 'Enter Name', 'user')}
+                        {renderField('Occupation', 'occupation', 'Enter Occupation', 'briefcase')}
+                        {renderField('Mobile', 'parentMobile', 'Enter Mobile', 'phone', 'phone-pad')}
+                        {renderField('Email', 'parentEmail', 'Enter Email', 'envelope', 'email-address')}
+                        {/* {renderField('Address', 'parentAddress', 'Enter Address', 'home')} */}
 
-                    <View style={styles.card}>
-                        {renderField('Parent Name', 'parentName', 'Enter Parent Name')}
-                        {renderField('Relationship', 'relationship', 'Father/Mother/Guardian')}
-                        {renderField('Parent Mobile', 'parentMobile', 'Enter Parent Mobile', 'phone-pad')}
-                        {renderField('Parent Email', 'parentEmail', 'Enter Parent Email', 'email-address')}
-                        {renderField('Occupation', 'occupation', 'Enter Occupation')}
-
-                        {isEditing && (
-                            <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Same as Student Address</Text>
-                                <Switch
-                                    value={sameAddress}
-                                    onValueChange={toggleSameAddress}
-                                    trackColor={{ false: "#767577", true: "#1a237e" }}
-                                    thumbColor={sameAddress ? "#fff" : "#f4f3f4"}
-                                />
-                            </View>
-                        )}
-
-                        {!sameAddress ? renderField('Parent Address', 'parentAddress', 'Enter Parent Address') : (
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Parent Address</Text>
-                                <Text style={[styles.valueText, { color: '#666', fontStyle: 'italic' }]}>
-                                    Same as residential address
-                                </Text>
+                        {!isEditing && (
+                            <View style={{ flexDirection: 'row', marginTop: 15, justifyContent: 'flex-end' }}>
+                                <TouchableOpacity
+                                    style={[styles.actionBtn, { backgroundColor: '#E8F5E9', width: 120, borderRadius: 10, marginRight: 10 }]}
+                                    onPress={() => Linking.openURL(`tel:${formData.parentMobile}`)}
+                                >
+                                    <FontAwesome name="phone" size={16} color="#00A86B" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: '#00A86B', fontWeight: 'bold' }}>Call</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionBtn, { backgroundColor: '#FFF3E0', width: 120, borderRadius: 10 }]}
+                                    onPress={() => Linking.openURL(`sms:${formData.parentMobile}`)}
+                                >
+                                    <FontAwesome name="comment" size={16} color="#FF8C00" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: '#FF8C00', fontWeight: 'bold' }}>Message</Text>
+                                </TouchableOpacity>
                             </View>
                         )}
                     </View>
+
+                    {/* 🔹 Mother Details */}
+                    <View style={styles.sectionCard}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Mother's Details</Text>
+                            <View style={[styles.sectionLine, { backgroundColor: '#6A0DAD' }]} />
+                        </View>
+                        {renderField('Mother Name', 'motherName', 'Enter Name', 'female')}
+                        {renderField('Occupation', 'motherOccupation', 'Enter Occupation', 'briefcase')}
+                        {renderField('Mobile', 'motherMobile', 'Enter Mobile', 'phone', 'phone-pad')}
+                        {renderField('Email', 'motherEmail', 'Enter Email', 'envelope', 'email-address')}
+
+                        {!isEditing && (
+                            <View style={{ flexDirection: 'row', marginTop: 15, justifyContent: 'flex-end' }}>
+                                <TouchableOpacity
+                                    style={[styles.actionBtn, { backgroundColor: '#E8F5E9', width: 120, borderRadius: 10, marginRight: 10 }]}
+                                    onPress={() => Linking.openURL(`tel:${formData.motherMobile}`)}
+                                >
+                                    <FontAwesome name="phone" size={16} color="#00A86B" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: '#00A86B', fontWeight: 'bold' }}>Call</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionBtn, { backgroundColor: '#FFF3E0', width: 120, borderRadius: 10 }]}
+                                    onPress={() => Linking.openURL(`sms:${formData.motherMobile}`)}
+                                >
+                                    <FontAwesome name="comment" size={16} color="#FF8C00" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: '#FF8C00', fontWeight: 'bold' }}>Message</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+
                 </View>
-
-                {isEditing && (
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                        <Text style={styles.saveButtonText}>Save Changes</Text>
-                    </TouchableOpacity>
-                )}
-
-                <View style={{ height: 40 }} />
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -256,140 +279,160 @@ export default function StudentProfile() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f7fa',
+        backgroundColor: '#F5F7FA',
     },
-    scrollContent: {
-        padding: 20,
+    headerContainer: {
+        paddingTop: Platform.OS === 'android' ? 50 : 20,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        shadowColor: '#0056D2',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        elevation: 10,
     },
-    headerBtn: {
-        color: '#fff',
-        fontSize: 16,
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    avatarContainer: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.5)',
+    },
+    avatarText: {
+        fontSize: 32,
         fontWeight: 'bold',
-        marginRight: 10,
+        color: '#fff',
     },
-    section: {
-        marginBottom: 25,
+    headerName: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#fff',
+        letterSpacing: 0.5,
+    },
+    headerSub: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.9)',
+        marginTop: 4,
+    },
+    editBtn: {
+        backgroundColor: '#fff',
+        flexDirection: 'row',
+        alignSelf: 'flex-start',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    editBtnText: {
+        color: '#0056D2',
+        fontWeight: 'bold',
+        marginLeft: 8,
+        fontSize: 14,
+    },
+    contentContainer: {
+        padding: 20,
+        marginTop: 0,
+    },
+    sectionCard: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
     },
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 15,
-    },
-    iconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: '#e8eaf6',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
+        marginBottom: 20,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
+        marginRight: 15,
     },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 2,
+    sectionLine: {
+        flex: 1,
+        height: 2,
+        backgroundColor: '#0056D2',
+        opacity: 0.2,
+        borderRadius: 1,
     },
-    inputGroup: {
-        marginBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        paddingBottom: 10,
+    fieldContainer: {
+        marginBottom: 18,
+    },
+    labelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    labelIcon: {
+        width: 24,
+        height: 24,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
     },
     label: {
         fontSize: 12,
+        fontWeight: '700',
         color: '#666',
-        marginBottom: 8,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     valueRow: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 4,
     },
     valueText: {
         fontSize: 16,
-        color: '#333',
+        color: '#222',
         fontWeight: '500',
+        flex: 1,
+    },
+    input: {
+        backgroundColor: '#F9FAFB',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        fontSize: 16,
+        color: '#333',
     },
     actionIcons: {
         flexDirection: 'row',
     },
     actionBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 10,
-    },
-    input: {
-        fontSize: 16,
-        color: '#333',
-        paddingVertical: 4,
-        fontWeight: '500',
-    },
-    dropdownContainer: {
-        flexDirection: 'row',
-    },
-    optionChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f5f5f5',
-        marginRight: 10,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    },
-    optionChipSelected: {
-        backgroundColor: '#e8eaf6',
-        borderColor: '#1a237e',
-    },
-    optionText: {
-        color: '#666',
-        fontSize: 14,
-    },
-    optionTextSelected: {
-        color: '#1a237e',
-        fontWeight: 'bold',
-    },
-    switchRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-        paddingVertical: 5,
-    },
-    switchLabel: {
-        fontSize: 14,
-        color: '#333',
-        fontWeight: '500',
-    },
-    saveButton: {
-        backgroundColor: '#1a237e',
-        paddingVertical: 15,
-        borderRadius: 30,
-        alignItems: 'center',
-        marginTop: 10,
-        shadowColor: '#1a237e',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    saveButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
     },
 });

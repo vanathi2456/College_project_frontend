@@ -1,17 +1,149 @@
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+
+const DEPTS = [
+    { id: '1', name: 'Computer Science', code: 'CSE', hod: 'Dr. A. Sharma', students: 520, faculty: 35, color: '#1A237E' },
+    { id: '2', name: 'Electronics & Comm', code: 'ECE', hod: 'Dr. B. Verma', students: 480, faculty: 32, color: '#E65100' },
+    { id: '3', name: 'Mechanical Engg', code: 'MECH', hod: 'Dr. C. Gupta', students: 450, faculty: 40, color: '#1B5E20' },
+    { id: '4', name: 'Civil Engineering', code: 'CIVIL', hod: 'Dr. D. Rao', students: 300, faculty: 25, color: '#B71C1C' },
+    { id: '5', name: 'Electrical & Elec', code: 'EEE', hod: 'Dr. E. Mani', students: 350, faculty: 28, color: '#4A148C' },
+    { id: '6', name: 'AI & Data Science', code: 'AIDS', hod: 'Dr. F. Khan', students: 200, faculty: 15, color: '#006064' },
+];
 
 export default function AdminDepartments() {
     return (
         <View style={styles.container}>
-            <Text style={styles.text}>Manage Departments</Text>
-            <Text style={styles.subText}>Add/Edit/Remove College Departments.</Text>
+            <StatusBar barStyle="light-content" />
+            <LinearGradient
+                colors={['#D32F2F', '#B71C1C']}
+                style={styles.header}
+            >
+                <Text style={styles.headerTitle}>Departments</Text>
+                <Text style={styles.headerSubtitle}>Manage Departments & Heads</Text>
+            </LinearGradient>
+
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.grid}>
+                    {DEPTS.map((dept, index) => (
+                        <Animated.View
+                            key={dept.id}
+                            entering={ZoomIn.delay(index * 100)}
+                            style={styles.cardWrapper}
+                        >
+                            <TouchableOpacity style={styles.card} activeOpacity={0.9}>
+                                <View style={[styles.colorStrip, { backgroundColor: dept.color }]} />
+                                <View style={styles.cardBody}>
+                                    <View style={styles.cardHeader}>
+                                        <View style={[styles.iconBox, { backgroundColor: dept.color + '15' }]}>
+                                            <Text style={[styles.deptCode, { color: dept.color }]}>{dept.code}</Text>
+                                        </View>
+                                        <TouchableOpacity>
+                                            <MaterialIcons name="more-vert" size={24} color="#999" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <Text style={styles.deptName} numberOfLines={1}>{dept.name}</Text>
+                                    <View style={styles.hodRow}>
+                                        <FontAwesome name="user" size={12} color="#666" />
+                                        <Text style={styles.hodName}>{dept.hod}</Text>
+                                    </View>
+
+                                    <View style={styles.divider} />
+
+                                    <View style={styles.statsRow}>
+                                        <View style={styles.stat}>
+                                            <Text style={styles.statVal}>{dept.students}</Text>
+                                            <Text style={styles.statLbl}>Students</Text>
+                                        </View>
+                                        <View style={styles.stat}>
+                                            <Text style={styles.statVal}>{dept.faculty}</Text>
+                                            <Text style={styles.statLbl}>Faculty</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    ))}
+                </View>
+            </ScrollView>
+
+            <TouchableOpacity style={styles.fab}>
+                <LinearGradient
+                    colors={['#D32F2F', '#B71C1C']}
+                    style={styles.fabGradient}
+                >
+                    <MaterialIcons name="add" size={30} color="#fff" />
+                </LinearGradient>
+            </TouchableOpacity>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f7fa' },
-    text: { fontSize: 18, fontWeight: 'bold' },
-    subText: { color: '#666', marginTop: 10 }
+    container: { flex: 1, backgroundColor: '#F5F7FA' },
+    header: {
+        paddingTop: Platform.OS === 'android' ? 50 : 20,
+        paddingBottom: 25,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        elevation: 5,
+    },
+    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 2 },
+
+    content: { padding: 15, paddingBottom: 80 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+    cardWrapper: { width: '48%', marginBottom: 15 },
+
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        overflow: 'hidden',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        height: 190,
+    },
+    colorStrip: { height: 6, width: '100%' },
+    cardBody: { padding: 12, flex: 1 },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+    iconBox: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    deptCode: { fontSize: 12, fontWeight: 'bold' },
+
+    deptName: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 6 },
+    hodRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    hodName: { fontSize: 11, color: '#666', marginLeft: 6 },
+
+    divider: { height: 1, backgroundColor: '#f0f0f0', marginBottom: 10 },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    stat: { alignItems: 'center' },
+    statVal: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+    statLbl: { fontSize: 10, color: '#888' },
+
+    fab: {
+        position: 'absolute',
+        bottom: 30,
+        right: 30,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        elevation: 8,
+        shadowColor: '#D32F2F',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+    },
+    fabGradient: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 });

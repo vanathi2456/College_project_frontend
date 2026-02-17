@@ -1,12 +1,13 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Animated,
     Dimensions,
     Image,
-    Linking,
     Modal,
+    Platform,
+    Pressable,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -15,60 +16,82 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import Animated, {
+    FadeInDown,
+    FadeInUp,
+    ZoomIn,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming
+} from 'react-native-reanimated';
 import { UserRole } from '../types';
 
 const { width } = Dimensions.get('window');
+const COLUMN_WIDTH = (width - 48) / 2;
 
 const DEPARTMENTS = [
-    { id: 'cse', name: 'Computer Science', code: 'CSE', icon: 'laptop', color: '#1a237e' },
-    { id: 'ece', name: 'Electronics & Comm', code: 'ECE', icon: 'microchip', color: '#0d47a1' },
-    { id: 'eee', name: 'Electrical & Electronics', code: 'EEE', icon: 'bolt', color: '#1565c0' },
-    { id: 'mech', name: 'Mechanical Engg', code: 'MECH', icon: 'cogs', color: '#1976d2' },
-    { id: 'civil', name: 'Civil Engineering', code: 'CIVIL', icon: 'building', color: '#0277bd' },
-    { id: 'aids', name: 'AI & Data Science', code: 'AIDS', icon: 'sitemap', color: '#00695c' },
+    { id: 'cse', name: 'Computer Science', code: 'CSE', icon: 'laptop', colors: ['#0056D2', '#42A5F5'] },
+    { id: 'ece', name: 'Electronics & Comm', code: 'ECE', icon: 'microchip', colors: ['#FF8C00', '#FFB74D'] },
+    { id: 'eee', name: 'Electrical & Electronics', code: 'EEE', icon: 'bolt', colors: ['#6A0DAD', '#AB47BC'] },
+    { id: 'mech', name: 'Mechanical Engg', code: 'MECH', icon: 'cogs', colors: ['#00A86B', '#66BB6A'] },
+    { id: 'civil', name: 'Civil Engineering', code: 'CIVIL', icon: 'building', colors: ['#D32F2F', '#FF7043'] },
+    { id: 'aids', name: 'AI & Data Science', code: 'AIDS', icon: 'sitemap', colors: ['#311B92', '#7E57C2'] },
 ];
 
 const FEATURES = [
-    { icon: 'graduation-cap', title: 'Expert Faculty', desc: 'Learn from industry veterans and PhD holders.' },
-    { icon: 'globe', title: 'Global Exposure', desc: 'International conferences and exchange programs.' },
-    { icon: 'briefcase', title: 'Placement Support', desc: '100% placement assistance with top MNCs.' },
-    { icon: 'flask', title: 'Research & Innovation', desc: 'State-of-the-art labs and research centers.' },
+    { icon: 'graduation-cap', title: 'Top Faculty', desc: 'Learn from industry experts.' },
+    { icon: 'globe', title: 'Global', desc: 'International tie-ups.' },
+    { icon: 'briefcase', title: 'Placements', desc: '100% Career support.' },
 ];
 
 const STATS = [
     { label: 'Students', value: '2500+' },
     { label: 'Faculty', value: '150+' },
-    { label: 'Courses', value: '12' },
-    { label: 'Placement', value: '95%' },
+    { label: 'Placement', value: '98%' },
 ];
+
+// 🎨 Reusable Hover Card
+const HoverCard = ({ children, style, onPress }: { children: React.ReactNode, style?: any, onPress?: () => void }) => {
+    const scale = useSharedValue(1);
+    const shadowOpacity = useSharedValue(0.1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+        shadowOpacity: shadowOpacity.value,
+    }));
+
+    const handleHoverIn = () => {
+        scale.value = withSpring(1.05);
+        shadowOpacity.value = withTiming(0.25);
+    };
+
+    const handleHoverOut = () => {
+        scale.value = withSpring(1);
+        shadowOpacity.value = withTiming(0.1);
+    };
+
+    return (
+        <Pressable
+            onPress={onPress}
+            onHoverIn={handleHoverIn}
+            onHoverOut={handleHoverOut}
+            onPressIn={() => scale.value = withSpring(0.98)}
+            onPressOut={() => scale.value = withSpring(1)}
+            style={({ pressed }) => [style, Platform.OS === 'web' && { cursor: 'pointer' }]}
+        >
+            <Animated.View style={[style, animatedStyle]}>
+                {children}
+            </Animated.View>
+        </Pressable>
+    );
+};
 
 export default function LandingPage() {
     const router = useRouter();
     const [modalVisible, setModalVisible] = useState(false);
 
-    // Animations
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 1000,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 800,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    }, []);
-
-    const handleLoginPress = () => {
-        setModalVisible(true);
-    };
-
+    const handleLoginPress = () => setModalVisible(true);
     const handleRoleSelect = (role: UserRole) => {
         setModalVisible(false);
         router.push(`/login?role=${role}`);
@@ -77,179 +100,203 @@ export default function LandingPage() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <Stack.Screen options={{ headerShown: false }} />
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.logoContainer}>
-                    <Image
-                        source={require('../assets/images/college_logo.png')}
-                        style={styles.headerLogo}
-                        resizeMode="contain"
-                    />
-                    <View>
-                        <Text style={styles.headerTitle}>Kathir College</Text>
-                        <Text style={styles.headerSubTitle}>of Engineering</Text>
-                    </View>
+            {/* 🔷 Sticky Navbar */}
+            <LinearGradient
+                colors={['#0056D2', '#003c8f']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.navbar}
+            >
+                <View style={styles.navLogoContainer}>
+                    <Image source={require('../assets/images/college_logo.png')} style={styles.navLogo} resizeMode="contain" />
+                    <Text style={styles.navTitle}>KATHIR COLLEGE</Text>
                 </View>
-                <TouchableOpacity style={styles.loginBtn} onPress={handleLoginPress}>
-                    <Text style={styles.loginBtnText}>Login</Text>
+                <TouchableOpacity onPress={handleLoginPress} style={styles.navLoginBtn}>
+                    <Text style={styles.navLoginText}>Login</Text>
+                    <FontAwesome name="arrow-right" size={14} color="#0056D2" style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
-            </View>
+            </LinearGradient>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* Hero Section */}
-                <View style={styles.heroSection}>
+                {/* 🔷 HERO SECTION */}
+                <View style={styles.heroContainer}>
                     <Image
                         source={require('../assets/images/college_hero.png')}
-                        style={styles.heroImage}
+                        style={styles.heroBg}
                         resizeMode="cover"
                     />
-                    <View style={styles.heroOverlay} />
+                    <LinearGradient
+                        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+                        style={styles.heroOverlay}
+                    />
 
-                    <Animated.View style={[styles.heroContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                        <View style={styles.heroBadge}>
-                            <Text style={styles.heroBadgeText}>Top Ranked Engineering College</Text>
-                        </View>
-                        <Text style={styles.heroTitle}>Shaping the Future of Engineering</Text>
-                        <Text style={styles.heroSubtitle}>Empowering students with knowledge, innovation, and excellence since 2008.</Text>
+                    <View style={styles.heroContent}>
+                        <Animated.View entering={ZoomIn.duration(1000).springify()} style={styles.logoWrapper}>
+                            <LinearGradient
+                                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0)']}
+                                style={styles.logoGlow}
+                            />
+                            <Image source={require('../assets/images/college_logo.png')} style={styles.mainLogo} resizeMode="contain" />
+                        </Animated.View>
 
-                        <View style={styles.heroActions}>
-                            <TouchableOpacity style={styles.primaryBtn} onPress={handleLoginPress}>
-                                <Text style={styles.primaryBtnText}>Get Started</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.secondaryBtn}>
-                                <Text style={styles.secondaryBtnText}>Explore Courses</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </Animated.View>
+                        <Animated.View entering={FadeInDown.delay(300).duration(800)} style={styles.titleWrapper}>
+                            <Text style={styles.collegeName}>KATHIR COLLEGE OF ENGINEERING</Text>
+                            <View style={styles.divider} />
+                            <Text style={styles.tagline}>“Inspiring Excellence • Empowering Learners”</Text>
+                        </Animated.View>
+
+                        <Animated.View entering={FadeInUp.delay(600).duration(800)} style={styles.actionContainer}>
+                            <HoverCard style={{ marginBottom: 15 }} onPress={handleLoginPress}>
+                                <LinearGradient
+                                    colors={['#0056D2', '#6A0DAD']} // Blue -> Purple
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.primaryBtn}
+                                >
+                                    <Text style={styles.btnText}>Student / Faculty Login</Text>
+                                    <FontAwesome name="sign-in" size={18} color="#fff" style={{ marginLeft: 8 }} />
+                                </LinearGradient>
+                            </HoverCard>
+
+                            <HoverCard onPress={() => { }}>
+                                <LinearGradient
+                                    colors={['#FF8C00', '#00A86B']} // Orange -> Green
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.secondaryBtn}
+                                >
+                                    <Text style={styles.btnText}>Explore Departments</Text>
+                                    <FontAwesome name="compass" size={18} color="#fff" style={{ marginLeft: 8 }} />
+                                </LinearGradient>
+                            </HoverCard>
+                        </Animated.View>
+                    </View>
                 </View>
 
-                {/* Quick Stats Bar */}
-                <View style={styles.statsContainer}>
+                {/* 🔷 QUICK STATS BAR */}
+                <Animated.View entering={FadeInUp.delay(800).springify()} style={styles.statsContainer}>
                     {STATS.map((stat, index) => (
                         <View key={index} style={styles.statItem}>
                             <Text style={styles.statValue}>{stat.value}</Text>
                             <Text style={styles.statLabel}>{stat.label}</Text>
                         </View>
                     ))}
-                </View>
+                </Animated.View>
 
-                {/* Departments Section */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeaderRow}>
-                        <Text style={styles.sectionHeader}>Our Departments</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.seeAllText}>See All</Text>
-                        </TouchableOpacity>
+                {/* 🔷 DEPARTMENTS */}
+                <View style={styles.sectionContainer}>
+                    <View style={styles.sectionHeader}>
+                        <View style={styles.titleRow}>
+                            <View style={styles.titleBar} />
+                            <Text style={styles.sectionTitle}>Our Departments</Text>
+                        </View>
+                        <Text style={styles.sectionSubtitle}>Discover our world-class academic programs</Text>
                     </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.deptScroll}>
+
+                    <View style={styles.deptGrid}>
                         {DEPARTMENTS.map((dept, index) => (
-                            <TouchableOpacity key={index} style={styles.deptCard}>
-                                <View style={[styles.deptIconContainer, { backgroundColor: dept.color }]}>
-                                    <FontAwesome name={dept.icon as any} size={24} color="#fff" />
-                                </View>
-                                <Text style={styles.deptCode}>{dept.code}</Text>
-                                <Text style={styles.deptName}>{dept.name}</Text>
-                            </TouchableOpacity>
+                            <Animated.View key={dept.id} entering={FadeInDown.delay(index * 100 + 400).springify()} style={styles.deptCardWrapper}>
+                                <HoverCard style={styles.deptCardShadow}>
+                                    <LinearGradient
+                                        colors={dept.colors}
+                                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                        style={styles.deptCard}
+                                    >
+                                        <View style={styles.deptIconCircle}>
+                                            <FontAwesome name={dept.icon as any} size={28} color={dept.colors[0]} />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.deptCode}>{dept.code}</Text>
+                                            <Text style={styles.deptName}>{dept.name}</Text>
+                                        </View>
+                                        <View style={styles.deptGlow} />
+                                    </LinearGradient>
+                                </HoverCard>
+                            </Animated.View>
                         ))}
-                    </ScrollView>
-                </View>
-
-                {/* Why Choose Us */}
-                <View style={[styles.section, styles.bgLight]}>
-                    <Text style={styles.sectionHeader}>Why Choose Us?</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuresScroll}>
-                        {FEATURES.map((feature, index) => (
-                            <View key={index} style={styles.featureCard}>
-                                <View style={styles.featureIconBox}>
-                                    <FontAwesome name={feature.icon as any} size={32} color="#1a237e" />
-                                </View>
-                                <Text style={styles.featureTitle}>{feature.title}</Text>
-                                <Text style={styles.featureDesc}>{feature.desc}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <View style={styles.footerContent}>
-                        <View style={styles.footerBrand}>
-                            <Image source={require('../assets/images/college_logo.png')} style={{ width: 40, height: 40, marginRight: 10 }} resizeMode="contain" />
-                            <Text style={styles.footerTitle}>Kathir College of Engineering</Text>
-                        </View>
-                        <Text style={styles.footerAddress}>
-                            Avinashi Road, Neelambur, Coimbatore - 641062, Tamil Nadu, India.
-                        </Text>
-                        <View style={styles.socialRow}>
-                            {['facebook', 'twitter', 'linkedin', 'instagram'].map((icon, i) => (
-                                <TouchableOpacity key={i} style={styles.socialIcon}>
-                                    <FontAwesome name={icon as any} size={18} color="#fff" />
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                        <TouchableOpacity onPress={() => Linking.openURL('tel:+911234567890')}>
-                            <Text style={styles.contactText}>📞 +91 123 456 7890</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.copyText}>© 2026 Kathir College of Engineering. All rights reserved.</Text>
                     </View>
                 </View>
 
+                {/* 🔷 WHY CHOOSE US */}
+                <View style={[styles.sectionContainer, styles.bgLight]}>
+                    <Text style={[styles.sectionTitle, { textAlign: 'center', marginBottom: 30 }]}>Why Choose Kathir?</Text>
+                    <View style={styles.featuresRow}>
+                        {FEATURES.map((feature, index) => (
+                            <HoverCard key={index} style={styles.featureItem}>
+                                <LinearGradient
+                                    colors={['#e3f2fd', '#fff']}
+                                    style={styles.featureGradient}
+                                >
+                                    <View style={styles.featureIconCircle}>
+                                        <FontAwesome name={feature.icon as any} size={24} color="#0056D2" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.featureTitle}>{feature.title}</Text>
+                                        <Text style={styles.featureDesc}>{feature.desc}</Text>
+                                    </View>
+                                </LinearGradient>
+                            </HoverCard>
+                        ))}
+                    </View>
+                </View>
+
+                {/* 🔷 FOOTER */}
+                <View style={styles.footer}>
+                    <LinearGradient
+                        colors={['#1a1a1a', '#000']}
+                        style={styles.footerGradient}
+                    >
+                        <Text style={styles.footerText}>© 2026 Kathir College of Engineering</Text>
+                        <Text style={styles.footerSubText}>Coimbatore, Tamil Nadu • Est. 2008</Text>
+                    </LinearGradient>
+                </View>
             </ScrollView>
 
             {/* Login Modal */}
             <Modal
-                animationType="slide"
+                animationType="fade"
                 transparent={true}
                 visible={modalVisible}
                 onRequestClose={() => setModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                    <Animated.View entering={ZoomIn.duration(300)} style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Welcome Back</Text>
-                            <Text style={styles.modalSubtitle}>Please select your role to continue</Text>
+                            <Text style={styles.modalTitle}>Choose Portal</Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
                         </View>
 
-                        <TouchableOpacity style={styles.roleCard} onPress={() => handleRoleSelect('student')}>
-                            <View style={[styles.roleIconContainer, { backgroundColor: '#e3f2fd' }]}>
-                                <Text style={styles.roleIcon}>🎓</Text>
-                            </View>
-                            <View style={styles.roleInfo}>
-                                <Text style={styles.roleName}>Student</Text>
-                                <Text style={styles.roleDesc}>Access profile, marks & attendance</Text>
-                            </View>
-                            <FontAwesome name="chevron-right" size={16} color="#ccc" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.roleCard} onPress={() => handleRoleSelect('faculty')}>
-                            <View style={[styles.roleIconContainer, { backgroundColor: '#e8f5e9' }]}>
-                                <Text style={styles.roleIcon}>👩‍🏫</Text>
-                            </View>
-                            <View style={styles.roleInfo}>
-                                <Text style={styles.roleName}>Faculty</Text>
-                                <Text style={styles.roleDesc}>Manage classes, marks & logic</Text>
-                            </View>
-                            <FontAwesome name="chevron-right" size={16} color="#ccc" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.roleCard} onPress={() => handleRoleSelect('admin')}>
-                            <View style={[styles.roleIconContainer, { backgroundColor: '#fff3e0' }]}>
-                                <Text style={styles.roleIcon}>🛠</Text>
-                            </View>
-                            <View style={styles.roleInfo}>
-                                <Text style={styles.roleName}>Admin</Text>
-                                <Text style={styles.roleDesc}>System administration & oversight</Text>
-                            </View>
-                            <FontAwesome name="chevron-right" size={16} color="#ccc" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.closeBtn} onPress={() => setModalVisible(false)}>
-                            <Text style={styles.closeBtnText}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
+                        {['Student', 'Faculty', 'Admin'].map((role, idx) => (
+                            <HoverCard
+                                key={role}
+                                onPress={() => handleRoleSelect(role.toLowerCase() as UserRole)}
+                                style={styles.roleCard}
+                            >
+                                <LinearGradient
+                                    colors={role === 'Student' ? ['#e3f2fd', '#fff'] : role === 'Faculty' ? ['#e8f5e9', '#fff'] : ['#fff3e0', '#fff']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.roleGradient}
+                                >
+                                    <View style={[styles.roleIcon, {
+                                        backgroundColor: role === 'Student' ? '#1565c0' : role === 'Faculty' ? '#2e7d32' : '#ef6c00'
+                                    }]}>
+                                        <FontAwesome
+                                            name={role === 'Student' ? 'graduation-cap' : role === 'Faculty' ? 'user' : 'cog'}
+                                            size={20}
+                                            color="#fff"
+                                        />
+                                    </View>
+                                    <View style={styles.roleTextContainer}>
+                                        <Text style={styles.roleTitle}>{role} Login</Text>
+                                        <Text style={styles.roleSub}>Access dashboard</Text>
+                                    </View>
+                                    <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+                                </LinearGradient>
+                            </HoverCard>
+                        ))}
+                    </Animated.View>
                 </View>
             </Modal>
         </SafeAreaView>
@@ -262,417 +309,402 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     scrollContent: {
-        paddingBottom: 20,
+        paddingBottom: 40,
     },
-    header: {
+    // Navbar
+    navbar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        zIndex: 10,
+        paddingVertical: 12,
+        paddingTop: Platform.OS === 'android' ? 40 : 12, // Status bar clear
+        elevation: 8,
+        zIndex: 100,
     },
-    logoContainer: {
+    navLogoContainer: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    headerLogo: {
+    navLogo: {
         width: 40,
         height: 40,
         marginRight: 10,
+        resizeMode: 'contain',
     },
-    logoIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: '#1a237e',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-    },
-    headerTitle: {
+    navTitle: {
+        color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#1a237e',
+        letterSpacing: 0.5,
     },
-    headerSubTitle: {
-        fontSize: 11,
-        color: '#666',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    loginBtn: {
-        backgroundColor: '#1a237e',
-        paddingHorizontal: 20,
-        paddingVertical: 8,
+    navLoginBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        paddingVertical: 6,
+        paddingHorizontal: 16,
         borderRadius: 20,
-        shadowColor: '#1a237e',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 2,
+        elevation: 4,
     },
-    loginBtnText: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 14,
+    navLoginText: {
+        color: '#0056D2',
+        fontWeight: 'bold',
+        fontSize: 13,
     },
-    // Hero Section
-    heroSection: {
+    // Hero
+    heroContainer: {
+        height: 600,
         position: 'relative',
-        height: 450,
         justifyContent: 'center',
-        marginBottom: 20,
+        alignItems: 'center',
     },
-    heroImage: {
+    heroBg: {
         ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
     },
     heroOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(26,35,126,0.6)',
     },
     heroContent: {
-        padding: 20,
         alignItems: 'center',
-    },
-    heroBadge: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.4)',
-    },
-    heroBadgeText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
-        letterSpacing: 0.5,
-    },
-    heroTitle: {
-        fontSize: 36,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-        marginBottom: 15,
-        lineHeight: 44,
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
-    },
-    heroSubtitle: {
-        fontSize: 16,
-        color: '#e0e0e0',
-        textAlign: 'center',
-        marginBottom: 30,
         paddingHorizontal: 20,
-        lineHeight: 24,
+        zIndex: 10,
+        width: '100%',
     },
-    heroActions: {
-        flexDirection: 'row',
+    logoWrapper: {
+        marginBottom: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    logoGlow: {
+        position: 'absolute',
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+    },
+    mainLogo: {
+        width: 130,
+        height: 130,
+        resizeMode: 'contain',
+        marginBottom: 10,
+    },
+    titleWrapper: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    collegeName: {
+        fontSize: 36,
+        fontWeight: '900',
+        color: '#fff',
+        letterSpacing: 1.5,
+        textAlign: 'center',
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 4 },
+        textShadowRadius: 10,
+        lineHeight: 44,
+    },
+    divider: {
+        width: 100,
+        height: 5,
+        backgroundColor: '#FF8C00',
+        marginVertical: 20,
+        borderRadius: 3,
+    },
+    tagline: {
+        fontSize: 18,
+        color: '#E0E0E0',
+        fontStyle: 'italic',
+        letterSpacing: 0.8,
+        textAlign: 'center',
+    },
+    actionContainer: {
+        width: '100%',
         alignItems: 'center',
     },
     primaryBtn: {
-        backgroundColor: '#fff',
-        paddingHorizontal: 25,
-        paddingVertical: 14,
-        borderRadius: 30,
-        marginRight: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    primaryBtnText: {
-        color: '#1a237e',
-        fontSize: 16,
-        fontWeight: 'bold',
+        flexDirection: 'row',
+        paddingVertical: 16,
+        paddingHorizontal: 50,
+        borderRadius: 50,
+        alignItems: 'center',
+        minWidth: 280,
+        justifyContent: 'center',
+        elevation: 6,
     },
     secondaryBtn: {
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingHorizontal: 25,
-        paddingVertical: 14,
-        borderRadius: 30,
-        borderWidth: 1,
-        borderColor: '#fff',
+        flexDirection: 'row',
+        paddingVertical: 16,
+        paddingHorizontal: 50,
+        borderRadius: 50,
+        alignItems: 'center',
+        minWidth: 280,
+        justifyContent: 'center',
+        elevation: 6,
     },
-    secondaryBtnText: {
+    btnText: {
         color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 17,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
-    // Stats Bar
+    // Stats
     statsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
         backgroundColor: '#fff',
         marginHorizontal: 20,
-        marginTop: -40,
-        paddingVertical: 20,
-        borderRadius: 15,
+        marginTop: -50,
+        marginBottom: 40,
+        paddingVertical: 30,
+        paddingHorizontal: 20,
+        borderRadius: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-        marginBottom: 30,
+        shadowRadius: 20,
+        elevation: 10,
     },
     statItem: {
         alignItems: 'center',
+        flex: 1,
     },
     statValue: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1a237e',
-        marginBottom: 4,
+        fontSize: 26,
+        fontWeight: '900',
+        color: '#0056D2',
     },
     statLabel: {
         fontSize: 12,
         color: '#666',
-        fontWeight: '500',
+        marginTop: 5,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
-    // Sections
-    section: {
+    // Departments
+    sectionContainer: {
         marginBottom: 40,
     },
-    bgLight: {
-        backgroundColor: '#f8f9fa',
-        paddingVertical: 40,
-    },
-    sectionHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 20,
-    },
     sectionHeader: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1a237e',
         paddingHorizontal: 20,
         marginBottom: 25,
     },
-    seeAllText: {
-        color: '#1a237e',
-        fontWeight: '600',
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
     },
-    deptScroll: {
-        paddingHorizontal: 15,
+    titleBar: {
+        width: 6,
+        height: 30,
+        backgroundColor: '#0056D2',
+        marginRight: 10,
+        borderRadius: 3,
+    },
+    sectionTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#111',
+    },
+    sectionSubtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginLeft: 16,
+    },
+    deptGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: 16,
+        justifyContent: 'space-between',
+    },
+    deptCardWrapper: {
+        width: COLUMN_WIDTH,
+        marginBottom: 20,
+    },
+    deptCardShadow: {
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 8,
+        backgroundColor: '#fff',
     },
     deptCard: {
+        borderRadius: 20,
+        padding: 20,
+        height: 180,
+        justifyContent: 'space-between',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    deptIconCircle: {
+        width: 55,
+        height: 55,
+        borderRadius: 18,
         backgroundColor: '#fff',
-        width: 140,
-        height: 160,
-        borderRadius: 15,
-        marginHorizontal: 8,
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+    },
+    deptCode: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#fff',
+        letterSpacing: 1,
+        marginBottom: 4,
+        textShadowColor: 'rgba(0,0,0,0.2)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+    },
+    deptName: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.9)',
+        fontWeight: '500',
+    },
+    deptGlow: {
+        position: 'absolute',
+        top: -20,
+        right: -20,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    // Features
+    bgLight: {
+        backgroundColor: '#F3F4F6',
+        paddingVertical: 50,
+        marginHorizontal: 0,
+    },
+    featuresRow: {
+        paddingHorizontal: 20,
+    },
+    featureItem: {
+        marginBottom: 20,
+        borderRadius: 20,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
+        shadowRadius: 8,
+        elevation: 2,
     },
-    deptIconContainer: {
+    featureGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 24,
+        borderRadius: 20,
+    },
+    featureIconCircle: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 15,
-    },
-    deptCode: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    deptName: {
-        fontSize: 12,
-        color: '#666',
-        textAlign: 'center',
-        paddingHorizontal: 5,
-    },
-    featuresScroll: {
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-    },
-    featureCard: {
-        width: 300,
         backgroundColor: '#fff',
-        marginRight: 20,
-        padding: 25,
-        borderRadius: 24,
-        shadowColor: '#1a237e',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(26,35,126,0.05)',
-    },
-    featureIconBox: {
-        width: 64,
-        height: 64,
-        borderRadius: 20,
-        backgroundColor: '#e8eaf6',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginRight: 20,
+        borderWidth: 1,
+        borderColor: '#e3f2fd',
     },
     featureTitle: {
-        fontSize: 22, // Highly visible
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#1a237e',
-        marginBottom: 12,
-        letterSpacing: 0.5,
+        color: '#0056D2',
+        marginBottom: 6,
     },
     featureDesc: {
-        fontSize: 16, // Highly visible
-        color: '#444',
-        lineHeight: 24,
-        fontWeight: '500',
+        fontSize: 14,
+        color: '#555',
+        lineHeight: 20,
     },
     // Footer
     footer: {
-        backgroundColor: '#0d47a1', // Dark blue
-        paddingVertical: 40,
-        paddingHorizontal: 20,
+        marginTop: 0,
     },
-    footerContent: {
+    footerGradient: {
+        paddingVertical: 30,
         alignItems: 'center',
     },
-    footerBrand: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 15,
-    },
-    footerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+    footerText: {
+        fontSize: 14,
         color: '#fff',
-        marginLeft: 10,
-    },
-    footerAddress: {
-        color: 'rgba(255,255,255,0.7)',
-        textAlign: 'center',
-        fontSize: 13,
-        lineHeight: 20,
-        marginBottom: 20,
-        maxWidth: 300,
-    },
-    socialRow: {
-        flexDirection: 'row',
-        marginBottom: 20,
-    },
-    socialIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginHorizontal: 8,
-    },
-    contactText: {
-        color: '#fff',
-        fontSize: 16,
         fontWeight: '600',
-        marginBottom: 25,
     },
-    copyText: {
-        color: 'rgba(255,255,255,0.4)',
+    footerSubText: {
         fontSize: 12,
+        color: '#888',
+        marginTop: 6,
     },
     // Modal
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        padding: 20,
     },
     modalContent: {
         backgroundColor: '#fff',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        padding: 30,
-        minHeight: 450,
+        borderRadius: 25,
+        padding: 25,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -5 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
         elevation: 10,
     },
     modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 20,
     },
     modalTitle: {
         fontSize: 24,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 5,
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        color: '#666',
     },
     roleCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 16,
         marginBottom: 15,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 5,
+        borderRadius: 15,
         elevation: 2,
     },
-    roleIconContainer: {
+    roleGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: '#eee',
+    },
+    roleIcon: {
         width: 50,
         height: 50,
-        borderRadius: 15,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 4,
     },
-    roleIcon: {
-        fontSize: 24,
-    },
-    roleInfo: {
+    roleTextContainer: {
         flex: 1,
     },
-    roleName: {
-        fontSize: 16,
+    roleTitle: {
+        fontSize: 17,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 2,
     },
-    roleDesc: {
-        fontSize: 12,
-        color: '#888',
-    },
-    closeBtn: {
-        marginTop: 20,
-        padding: 15,
-        alignItems: 'center',
-    },
-    closeBtnText: {
-        color: '#ff5252',
-        fontSize: 16,
-        fontWeight: 'bold',
+    roleSub: {
+        fontSize: 13,
+        color: '#666',
+        marginTop: 2,
     },
 });

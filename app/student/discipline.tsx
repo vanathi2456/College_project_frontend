@@ -1,220 +1,188 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 const DISCIPLINE_RECORDS = [
-    { id: 1, type: 'Warning', date: '2025-10-12', reason: 'Late to class (3rd instance)', status: 'Active', color: '#ff9800' },
-    { id: 2, type: 'Notice', date: '2025-09-05', reason: 'Dress code violation', status: 'Resolved', color: '#4caf50' },
-];
-
-const ILLEGAL_ACTIVITIES = [
-    // Empty for now, showing "Good Standing"
+    { id: '1', type: 'Warning', date: '12 Oct 2025', reason: 'Late to class (3rd instance)', status: 'Active', color: '#FF9800', icon: 'exclamation' },
+    { id: '2', type: 'Notice', date: '05 Sep 2025', reason: 'Dress code violation', status: 'Resolved', color: '#4CAF50', icon: 'check' },
 ];
 
 export default function StudentDiscipline() {
     const router = useRouter();
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.title}>Discipline & Compliance</Text>
-                <Text style={styles.subtitle}>Track your conduct record and status</Text>
-            </View>
-
-            {/* Overall Status Card */}
-            <View style={[styles.statusCard, { backgroundColor: '#4caf50' }]}>
-                <View style={styles.statusIcon}>
-                    <FontAwesome name="check-circle" size={40} color="#fff" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" />
+            <LinearGradient
+                colors={['#D32F2F', '#B71C1C']}
+                style={styles.header}
+            >
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <MaterialIcons name="arrow-back" size={24} color="#fff" />
+                </TouchableOpacity>
+                <View>
+                    <Text style={styles.headerTitle}>Discipline Records</Text>
+                    <Text style={styles.headerSubtitle}>Conduct & Compliance History</Text>
                 </View>
-                <View style={styles.statusContent}>
-                    <Text style={styles.statusTitle}>Good Standing</Text>
-                    <Text style={styles.statusDesc}>You have no major disciplinary actions.</Text>
-                </View>
-            </View>
+            </LinearGradient>
 
-            {/* Warnings Section */}
-            <Text style={styles.sectionHeader}>Active Warnings & Notices</Text>
-            {DISCIPLINE_RECORDS.map((record) => (
-                <View key={record.id} style={[styles.recordCard, { borderLeftColor: record.color }]}>
-                    <View style={styles.recordHeader}>
-                        <View style={styles.recordTypeTag}>
-                            <Text style={[styles.recordType, { color: record.color }]}>{record.type}</Text>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+                {/* Overall Status Card */}
+                <Animated.View entering={ZoomIn.duration(600)} style={styles.statusCard}>
+                    <LinearGradient
+                        colors={['#43A047', '#2E7D32']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={styles.statusGradient}
+                    >
+                        <View style={styles.statusIconContainer}>
+                            <FontAwesome name="check" size={30} color="#43A047" />
                         </View>
-                        <Text style={styles.recordDate}>{record.date}</Text>
-                    </View>
-                    <Text style={styles.recordReason}>{record.reason}</Text>
-                    <Text style={[styles.recordStatus, { color: record.status === 'Resolved' ? '#4caf50' : '#ff9800' }]}>
-                        Status: {record.status}
+                        <View style={styles.statusTextContainer}>
+                            <Text style={styles.statusTitle}>Good Standing</Text>
+                            <Text style={styles.statusDesc}>You have no major disciplinary actions pending against you.</Text>
+                        </View>
+                    </LinearGradient>
+                </Animated.View>
+
+                <Text style={styles.sectionTitle}>History</Text>
+
+                {DISCIPLINE_RECORDS.map((record, index) => (
+                    <Animated.View
+                        key={record.id}
+                        entering={FadeInDown.delay(index * 150)}
+                        style={styles.card}
+                    >
+                        <View style={[styles.borderStrip, { backgroundColor: record.color }]} />
+                        <View style={styles.cardBody}>
+                            <View style={styles.cardHeader}>
+                                <View style={[styles.typeBadge, { backgroundColor: record.color + '15' }]}>
+                                    <Text style={[styles.typeText, { color: record.color }]}>{record.type}</Text>
+                                </View>
+                                <Text style={styles.dateText}>{record.date}</Text>
+                            </View>
+
+                            <Text style={styles.reasonText}>{record.reason}</Text>
+
+                            <View style={styles.divider} />
+
+                            <View style={styles.footer}>
+                                <Text style={styles.statusLabel}>Status:</Text>
+                                <View style={[styles.statusBadge, { backgroundColor: record.status === 'Resolved' ? '#E8F5E9' : '#FFF3E0' }]}>
+                                    <FontAwesome
+                                        name={record.status === 'Resolved' ? 'check-circle' : 'exclamation-circle'}
+                                        size={12}
+                                        color={record.status === 'Resolved' ? '#2E7D32' : '#EF6C00'}
+                                        style={{ marginRight: 5 }}
+                                    />
+                                    <Text style={[styles.statusValue, { color: record.status === 'Resolved' ? '#2E7D32' : '#EF6C00' }]}>
+                                        {record.status}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </Animated.View>
+                ))}
+
+                <View style={styles.infoBox}>
+                    <MaterialIcons name="info-outline" size={24} color="#1565C0" />
+                    <Text style={styles.infoText}>
+                        Maintaining good conduct is essential for placement eligibility and hostel accommodation.
                     </Text>
                 </View>
-            ))}
 
-            {/* Illegal Activity Section (Read-Only) */}
-            <Text style={styles.sectionHeader}>Illegal Activity Record</Text>
-            {ILLEGAL_ACTIVITIES.length === 0 ? (
-                <View style={styles.emptyState}>
-                    <FontAwesome name="shield" size={50} color="#ddd" />
-                    <Text style={styles.emptyText}>No illegal activities recorded.</Text>
-                    <Text style={styles.emptySubText}>Keep up the good conduct!</Text>
-                </View>
-            ) : (
-                <View>
-                    {/* Render items if any */}
-                </View>
-            )}
-
-            {/* Compliance Guidelines */}
-            <View style={styles.infoBox}>
-                <FontAwesome name="info-circle" size={24} color="#1a237e" />
-                <Text style={styles.infoText}>
-                    Strict action involves reporting to parents and legal authorities for severe misconduct (ragging, substance abuse, etc.).
-                </Text>
-            </View>
-
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                <Text style={styles.backButtonText}>Back to Dashboard</Text>
-            </TouchableOpacity>
-        </ScrollView>
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f7fa',
-        padding: 20,
-    },
+    container: { flex: 1, backgroundColor: '#F5F7FA' },
     header: {
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1a237e',
-    },
-    subtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 5,
-    },
-    statusCard: {
+        paddingTop: Platform.OS === 'android' ? 50 : 20,
+        paddingBottom: 25,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        elevation: 5,
         flexDirection: 'row',
-        padding: 20,
-        borderRadius: 15,
         alignItems: 'center',
+    },
+    backBtn: { marginRight: 15, marginTop: 4 },
+    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 2 },
+
+    content: { padding: 20 },
+
+    statusCard: {
         marginBottom: 25,
-        shadowColor: '#000',
+        borderRadius: 16,
+        elevation: 4,
+        shadowColor: '#2E7D32',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 4,
+        shadowRadius: 8,
     },
-    statusIcon: {
-        marginRight: 20,
+    statusGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 20,
+        borderRadius: 16,
     },
-    statusContent: {
-        flex: 1,
-    },
-    statusTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    statusDesc: {
-        color: '#e8f5e9',
-        fontSize: 13,
-    },
-    sectionHeader: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
-    },
-    recordCard: {
+    statusIconContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         backgroundColor: '#fff',
-        padding: 15,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    statusTextContainer: { flex: 1 },
+    statusTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
+    statusDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 12, lineHeight: 18 },
+
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15, marginLeft: 5 },
+
+    card: {
+        backgroundColor: '#fff',
         borderRadius: 12,
         marginBottom: 15,
-        borderLeftWidth: 5,
+        flexDirection: 'row',
+        overflow: 'hidden',
+        elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
-        elevation: 2,
     },
-    recordHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-    },
-    recordTypeTag: {
-        backgroundColor: '#f5f5f5',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    recordType: {
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
-    recordDate: {
-        color: '#999',
-        fontSize: 12,
-    },
-    recordReason: {
-        fontSize: 15,
-        color: '#333',
-        marginBottom: 8,
-    },
-    recordStatus: {
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    emptyState: {
-        alignItems: 'center',
-        padding: 30,
-        backgroundColor: '#fff',
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: '#eee',
-        borderStyle: 'dashed',
-        marginBottom: 20,
-    },
-    emptyText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
-        marginTop: 15,
-    },
-    emptySubText: {
-        fontSize: 13,
-        color: '#999',
-    },
+    borderStrip: { width: 5 },
+    cardBody: { flex: 1, padding: 15 },
+
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    typeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    typeText: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
+    dateText: { fontSize: 12, color: '#999' },
+
+    reasonText: { fontSize: 15, color: '#333', fontWeight: '500', marginBottom: 12 },
+
+    divider: { height: 1, backgroundColor: '#F0F0F0', marginBottom: 12 },
+
+    footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    statusLabel: { fontSize: 12, color: '#666' },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+    statusValue: { fontSize: 12, fontWeight: 'bold' },
+
     infoBox: {
         flexDirection: 'row',
-        backgroundColor: '#e8eaf6',
+        backgroundColor: '#E3F2FD',
         padding: 15,
         borderRadius: 12,
-        alignItems: 'center',
         marginTop: 10,
-        marginBottom: 30,
+        alignItems: 'center',
     },
-    infoText: {
-        flex: 1,
-        marginLeft: 15,
-        color: '#1a237e',
-        fontSize: 12,
-        lineHeight: 18,
-    },
-    backButton: {
-        alignSelf: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 30,
-    },
-    backButtonText: {
-        color: '#666',
-        fontWeight: '600',
-    },
+    infoText: { flex: 1, marginLeft: 15, color: '#1565C0', fontSize: 13, lineHeight: 18 },
 });

@@ -1,24 +1,47 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const EVENTS = [
-    { title: 'Tech Symposium', date: '24 Aug', color: '#ff9800', icon: 'microchip' },
-    { title: 'Workshop on AI', date: '02 Sep', color: '#2196f3', icon: 'laptop' },
-    { title: 'Cultural Fest', date: '15 Sep', color: '#e91e63', icon: 'music' },
+    { title: 'Tech Symposium', date: '24 Aug', color: '#FF8C00', icon: 'microchip' },
+    { title: 'Workshop on AI', date: '02 Sep', color: '#0056D2', icon: 'laptop' },
+    { title: 'Cultural Fest', date: '15 Sep', color: '#D32F2F', icon: 'music' },
 ];
 
 const MARKS = [
-    { subject: 'Maths', score: 85 },
-    { subject: 'Physics', score: 78 },
-    { subject: 'Chem', score: 92 },
-    { subject: 'Eng', score: 88 },
-    { subject: 'CS', score: 95 },
+    { subject: 'Maths', score: 85, color: '#42A5F5' },
+    { subject: 'Physics', score: 78, color: '#66BB6A' },
+    { subject: 'Chem', score: 92, color: '#FFA726' },
+    { subject: 'Eng', score: 88, color: '#AB47BC' },
+    { subject: 'CS', score: 95, color: '#EF5350' },
 ];
+
+const ScaleButton = ({ children, style, onPress }: { children: React.ReactNode, style?: any, onPress?: () => void }) => {
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    return (
+        <Pressable
+            onPress={onPress}
+            onPressIn={() => scale.value = withSpring(0.95)}
+            onPressOut={() => scale.value = withSpring(1)}
+            style={({ pressed }) => [style, Platform.OS === 'web' && { cursor: 'pointer' }]}
+        >
+            <Animated.View style={[{ width: '100%', height: '100%' }, animatedStyle]}>
+                {children}
+            </Animated.View>
+        </Pressable>
+    );
+};
 
 export default function StudentDashboard() {
     const router = useRouter();
@@ -32,101 +55,136 @@ export default function StudentDashboard() {
     };
 
     const quickActions = [
-        { title: 'Academics', icon: 'graduation-cap', route: '/student/academics', color: '#3f51b5' },
-        { title: 'Discipline', icon: 'gavel', route: '/student/discipline', color: '#d32f2f' },
-        { title: 'Timetable', icon: 'calendar', route: null, color: '#009688', action: () => Alert.alert('Timetable', 'Showing Weekly Schedule...') },
-        { title: 'Queries', icon: 'question-circle', route: '/student/query', color: '#ff5722' },
-        { title: 'Contact Faculty', icon: 'phone', route: null, color: '#4caf50', action: () => Alert.alert('Call', 'Connecting to Faculty Advisor...') },
-        { title: 'Profile', icon: 'user', route: '/student/profile', color: '#673ab7' },
+        { title: 'Academics', icon: 'graduation-cap', route: '/student/academics', color: '#0056D2', bg: '#E3F2FD' },
+        { title: 'Discipline', icon: 'gavel', route: '/student/discipline', color: '#D32F2F', bg: '#FFEBEE' },
+        { title: 'Timetable', icon: 'calendar', route: null, color: '#00A86B', bg: '#E8F5E9', action: () => Alert.alert('Timetable', 'Showing Weekly Schedule...') },
+        { title: 'Queries', icon: 'question-circle', route: '/student/query', color: '#FF8C00', bg: '#FFF3E0' },
+        { title: 'Achievements', icon: 'trophy', route: '/student/achievements', color: '#FFD700', bg: '#FFF8E1' },
+        { title: 'Contact', icon: 'phone', route: null, color: '#6A0DAD', bg: '#F3E5F5', action: () => Alert.alert('Faculty Advisor', 'Connecting...') },
+        { title: 'Profile', icon: 'user', route: '/student/profile', color: '#455A64', bg: '#ECEFF1' },
     ];
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
             {/* Header Profile Card */}
-            <View style={styles.headerCard}>
+            <LinearGradient
+                colors={['#0056D2', '#003c8f']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={styles.headerCard}
+            >
                 <View style={styles.headerTop}>
                     <View>
                         <Text style={styles.welcomeLabel}>Welcome Back,</Text>
                         <Text style={styles.userName}>{user?.name || 'Student Name'}</Text>
-                        <Text style={styles.userDept}>B.E. Computer Science | Sem 6</Text>
+                        <Text style={styles.userDept}>B.E. CSE | Semester 6</Text>
                     </View>
-                    <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-                        <FontAwesome name="sign-out" size={20} color="#fff" />
-                    </TouchableOpacity>
+                    <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+                        <MaterialIcons name="logout" size={20} color="#fff" />
+                    </Pressable>
                 </View>
 
-                {/* Attendance Ring Mockup */}
-                <View style={styles.attendanceRow}>
+                {/* Attendance & Stats */}
+                <View style={styles.statsRow}>
                     <View style={styles.attendanceContainer}>
                         <View style={styles.circleOuter}>
-                            <View style={styles.circleInner}>
-                                <Text style={styles.attendancePercent}>92%</Text>
-                                <Text style={styles.attendanceLabel}>Attendance</Text>
-                            </View>
+                            <LinearGradient
+                                colors={['#00A86B', '#66BB6A']}
+                                style={styles.circleGradient}
+                            >
+                                <View style={styles.circleInner}>
+                                    <Text style={styles.attendancePercent}>92%</Text>
+                                    <Text style={styles.attendanceLabel}>Present</Text>
+                                </View>
+                            </LinearGradient>
                         </View>
                     </View>
+
                     <View style={styles.statsCol}>
                         <View style={styles.statItem}>
                             <Text style={styles.statVal}>8.5</Text>
                             <Text style={styles.statLbl}>CGPA</Text>
                         </View>
+                        <View style={styles.statDivider} />
                         <View style={styles.statItem}>
-                            <Text style={styles.statVal}>12</Text>
-                            <Text style={styles.statLbl}>Backlogs: 0</Text>
+                            <Text style={styles.statVal}>0</Text>
+                            <Text style={styles.statLbl}>Backlogs</Text>
                         </View>
                     </View>
                 </View>
-            </View>
+            </LinearGradient>
 
-            {/* Quick Actions */}
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.actionGrid}>
-                {quickActions.map((item, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={styles.actionCard}
-                        onPress={() => item.route ? router.push(item.route as any) : item.action?.()}
-                    >
-                        <View style={[styles.iconCircle, { backgroundColor: item.color + '15' }]}>
-                            <FontAwesome name={item.icon as any} size={20} color={item.color} />
-                        </View>
-                        <Text style={styles.actionText}>{item.title}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            {/* Marks Overview (Bar Chart) */}
-            <Text style={styles.sectionTitle}>Internal Marks Overview</Text>
-            <View style={styles.chartCard}>
-                <View style={styles.chartContainer}>
-                    {MARKS.map((item, index) => (
-                        <View key={index} style={styles.barCol}>
-                            <View style={styles.barTrack}>
-                                <View style={[styles.barFill, { height: `${item.score}%` }]} />
-                            </View>
-                            <Text style={styles.barLabel}>{item.subject}</Text>
-                        </View>
+            <View style={styles.contentContainer}>
+                {/* Quick Actions */}
+                <Text style={styles.sectionTitle}>Dashboard</Text>
+                <View style={styles.actionGrid}>
+                    {quickActions.map((item, index) => (
+                        <Animated.View
+                            key={index}
+                            entering={FadeInUp.delay(index * 100).springify()}
+                            style={styles.actionCardWrapper}
+                        >
+                            <ScaleButton
+                                onPress={() => item.route ? router.push(item.route as any) : item.action?.()}
+                                style={[styles.actionCard, { backgroundColor: '#fff' }]}
+                            >
+                                <View style={[styles.iconCircle, { backgroundColor: item.bg }]}>
+                                    <FontAwesome name={item.icon as any} size={20} color={item.color} />
+                                </View>
+                                <Text style={styles.actionText}>{item.title}</Text>
+                            </ScaleButton>
+                        </Animated.View>
                     ))}
                 </View>
-            </View>
 
-            {/* Upcoming Events */}
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventScroll}>
-                {EVENTS.map((event, index) => (
-                    <View key={index} style={[styles.eventCard, { borderLeftColor: event.color }]}>
-                        <View style={[styles.eventIconBox, { backgroundColor: event.color + '20' }]}>
-                            <FontAwesome name={event.icon as any} size={20} color={event.color} />
-                        </View>
-                        <View>
-                            <Text style={styles.eventTitle}>{event.title}</Text>
-                            <Text style={styles.eventDate}>{event.date}</Text>
-                        </View>
+                {/* Performance Chart */}
+                <Text style={styles.sectionTitle}>Performance Overview</Text>
+                <View style={styles.chartCard}>
+                    <View style={styles.chartContainer}>
+                        {MARKS.map((item, index) => (
+                            <View key={index} style={styles.barCol}>
+                                <View style={styles.barTrack}>
+                                    <LinearGradient
+                                        colors={[item.color, item.color + '80']}
+                                        style={[styles.barFill, { height: `${item.score}%` }]}
+                                    />
+                                </View>
+                                <Text style={styles.barLabel}>{item.subject}</Text>
+                                <Text style={styles.barScore}>{item.score}</Text>
+                            </View>
+                        ))}
                     </View>
-                ))}
-            </ScrollView>
+                </View>
 
-            <View style={{ height: 40 }} />
+                {/* Upcoming Events */}
+                <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.eventScroll}>
+                    {EVENTS.map((event, index) => (
+                        <Animated.View key={index} entering={FadeInDown.delay(index * 150)}>
+                            <ScaleButton style={[styles.eventCard, { borderLeftColor: event.color }]}>
+                                <View style={styles.eventRow}>
+                                    <View style={[styles.eventDateBox, { backgroundColor: event.color + '15' }]}>
+                                        <Text style={[styles.eventDateText, { color: event.color }]}>
+                                            {event.date.split(' ')[0]}
+                                        </Text>
+                                        <Text style={[styles.eventMonthText, { color: event.color }]}>
+                                            {event.date.split(' ')[1]}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.eventInfo}>
+                                        <Text style={styles.eventTitle}>{event.title}</Text>
+                                        <View style={styles.eventTag}>
+                                            <FontAwesome name={event.icon as any} size={10} color="#666" style={{ marginRight: 4 }} />
+                                            <Text style={styles.eventTagText}>Campus</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            </ScaleButton>
+                        </Animated.View>
+                    ))}
+                </ScrollView>
+
+                <View style={{ height: 80 }} />
+            </View>
         </ScrollView>
     );
 }
@@ -134,47 +192,52 @@ export default function StudentDashboard() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f7fa',
-        padding: 20,
+        backgroundColor: '#F5F7FA',
     },
     headerCard: {
-        backgroundColor: '#1a237e',
-        borderRadius: 20,
-        padding: 24,
-        marginBottom: 25,
-        shadowColor: '#1a237e',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 8,
+        paddingTop: Platform.OS === 'android' ? 60 : 30,
+        paddingBottom: 40, // Extended background
+        paddingHorizontal: 24,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        shadowColor: '#0056D2',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        elevation: 10,
+        marginBottom: 10,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 20,
+        marginBottom: 25,
     },
     welcomeLabel: {
-        color: 'rgba(255,255,255,0.7)',
+        color: 'rgba(255,255,255,0.8)',
         fontSize: 14,
         marginBottom: 4,
+        fontWeight: '500',
     },
     userName: {
         color: '#fff',
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 4,
+        letterSpacing: 0.5,
     },
     userDept: {
         color: 'rgba(255,255,255,0.9)',
         fontSize: 13,
     },
     logoutBtn: {
-        padding: 8,
+        padding: 10,
         backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    attendanceRow: {
+    statsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -186,79 +249,110 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        borderWidth: 8,
-        borderColor: '#4caf50', // Green for good attendance
+        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        padding: 6,
+    },
+    circleGradient: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
     },
     circleInner: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#fff', // White center
         justifyContent: 'center',
         alignItems: 'center',
     },
     attendancePercent: {
-        color: '#fff',
-        fontSize: 24,
-        fontWeight: 'bold',
+        color: '#00A86B',
+        fontSize: 22,
+        fontWeight: '900',
     },
     attendanceLabel: {
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 10,
+        color: '#666',
+        fontSize: 9,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
     statsCol: {
         flex: 1,
-        marginLeft: 20,
-        justifyContent: 'space-around',
-        height: 80,
-    },
-    statItem: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 10,
         flexDirection: 'row',
+        marginLeft: 25,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: 16,
+        padding: 15,
         justifyContent: 'space-between',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    statItem: {
+        alignItems: 'center',
+        flex: 1,
+    },
+    statDivider: {
+        width: 1,
+        height: 30,
+        backgroundColor: 'rgba(255,255,255,0.3)',
     },
     statVal: {
         color: '#fff',
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 20,
     },
     statLbl: {
         color: 'rgba(255,255,255,0.8)',
-        fontSize: 12,
+        fontSize: 11,
+        marginTop: 2,
+    },
+    contentContainer: {
+        paddingHorizontal: 20,
+        marginTop: -30, // Pull up to overlap
+        paddingTop: 40, // Push content down to avoid collision
+        zIndex: 10,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 15,
-        marginLeft: 5,
+        marginLeft: 4,
     },
     actionGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        marginBottom: 25,
+        marginBottom: 20,
+    },
+    actionCardWrapper: {
+        width: '48%',
+        marginBottom: 15,
     },
     actionCard: {
-        width: '48%',
-        backgroundColor: '#fff',
-        padding: 15,
+        padding: 16,
         borderRadius: 16,
-        marginBottom: 15,
         flexDirection: 'row',
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 2,
+        shadowRadius: 8,
+        elevation: 3,
     },
     iconCircle: {
-        width: 40,
-        height: 40,
+        width: 42,
+        height: 42,
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
@@ -268,80 +362,111 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#333',
+        flexShrink: 1,
     },
     chartCard: {
         backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 16,
+        padding: 24,
+        borderRadius: 20,
         marginBottom: 25,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 2,
+        shadowRadius: 10,
+        elevation: 3,
     },
     chartContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
         alignItems: 'flex-end',
-        height: 150,
-        paddingBottom: 10,
+        height: 160,
     },
     barCol: {
         alignItems: 'center',
+        width: '15%',
     },
     barTrack: {
-        width: 12,
+        width: 10,
         height: 120,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 6,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 5,
         justifyContent: 'flex-end',
         overflow: 'hidden',
+        marginBottom: 8,
     },
     barFill: {
         width: '100%',
-        backgroundColor: '#1a237e',
-        borderRadius: 6,
+        borderRadius: 5,
     },
     barLabel: {
         fontSize: 10,
-        color: '#666',
-        marginTop: 8,
+        color: '#888',
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    barScore: {
+        fontSize: 11,
+        color: '#333',
+        fontWeight: 'bold',
     },
     eventScroll: {
         marginBottom: 20,
     },
     eventCard: {
         backgroundColor: '#fff',
-        width: 200,
+        width: 220,
         padding: 15,
-        borderRadius: 12,
+        borderRadius: 16,
         marginRight: 15,
-        flexDirection: 'row',
-        alignItems: 'center',
         borderLeftWidth: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 2,
+        shadowRadius: 8,
+        elevation: 3,
+        marginBottom: 10, // Shadow room
     },
-    eventIconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
+    eventRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    eventDateBox: {
+        width: 50,
+        height: 50,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
+    },
+    eventDateText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    eventMonthText: {
+        fontSize: 10,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+    },
+    eventInfo: {
+        flex: 1,
     },
     eventTitle: {
         fontSize: 14,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 2,
+        marginBottom: 6,
     },
-    eventDate: {
-        fontSize: 12,
+    eventTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    eventTagText: {
+        fontSize: 10,
         color: '#666',
     },
 });
